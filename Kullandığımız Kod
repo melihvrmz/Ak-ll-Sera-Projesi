@@ -1,0 +1,57 @@
+// Akıllı Sera Projesi - Kontrol Kodu
+// Özellikler: Yağmur Sensörü, Sıcaklık Takibi ve Mesafe (Hırsız) Sensörü
+
+#include <DHT.h>
+
+#define DHTPIN 2          // Sıcaklık ve Nem Sensörü Pin
+#define DHTTYPE DHT11
+#define RAIN_PIN A0       // Yağmur Sensörü Pin
+#define TRIG_PIN 9        // Mesafe Sensörü Trig
+#define ECHO_PIN 10       // Mesafe Sensörü Echo
+#define BUZZER_PIN 11     // Alarm/Buzzer Pin
+
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  Serial.begin(9600);
+  dht.begin();
+  pinMode(RAIN_PIN, INPUT);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  Serial.println("Sistem Baslatildi...");
+}
+
+void loop() {
+  // 1. Sıcaklık ve Nem Ölçümü
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+
+  // 2. Yağmur Kontrolü
+  int rainVal = analogRead(RAIN_PIN);
+  bool isRaining = (rainVal < 500); // Eşik değeri sensöre göre ayarlanabilir
+
+  // 3. Mesafe (İzinsiz Giriş) Kontrolü
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  long duration = pulseIn(ECHO_PIN, HIGH);
+  int distance = duration * 0.034 / 2;
+
+  // Verileri Ekrana Yazdır
+  Serial.print("Sicaklik: "); Serial.print(t);
+  Serial.print("C | Nem: %"); Serial.println(h);
+  
+  if(isRaining) Serial.println("UYARI: Yagmur Basladi!");
+  
+  if(distance < 50 && distance > 0) {
+    Serial.println("ALARM: Izinsiz Giris Tespit Edildi!");
+    digitalWrite(BUZZER_PIN, HIGH);
+  } else {
+    digitalWrite(BUZZER_PIN, LOW);
+  }
+
+  delay(2000); // 2 saniyede bir güncelle
+}
